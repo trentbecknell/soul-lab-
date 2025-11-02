@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Debug Test</title>
+  <script defer src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+</head>
+<body>
+  <h1>Debug Test</h1>
+  <button id="test">Click Me</button>
+  <div id="output">Waiting...</div>
+  
+  <script>
+  (function() {
+    'use strict';
+    
+    function initApp() {
+      if (typeof Tone === 'undefined') {
+        console.log('⏳ Waiting for Tone.js...');
+        document.getElementById('output').textContent = 'Waiting for Tone.js...';
+        setTimeout(initApp, 100);
+        return;
+      }
+      
+      console.log('✅ Tone.js loaded!');
+      document.getElementById('output').textContent = 'Tone.js loaded! Button should work now.';
+      
+      const btn = document.getElementById('test');
+      btn.onclick = async () => {
+        await Tone.start();
+        const synth = new Tone.Synth().toDestination();
+        synth.triggerAttackRelease("C4", "8n");
+        document.getElementById('output').textContent = 'Sound played! Did you hear it?';
+        console.log('🔊 Sound triggered');
+      };
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  })();
+  </script>
+</body>
+</html>

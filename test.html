@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio Test</title>
+</head>
+<body>
+  <h1>Simple Audio Test</h1>
+  <button id="test">Click Me - Test Button</button>
+  <p id="output">Waiting...</p>
+  
+  <script>
+    console.log('Script loaded!');
+    
+    const btn = document.getElementById('test');
+    const output = document.getElementById('output');
+    
+    console.log('Button element:', btn);
+    
+    btn.onclick = () => {
+      console.log('Button clicked!');
+      output.textContent = 'Button works! ' + new Date().toLocaleTimeString();
+    };
+    
+    console.log('Event listener attached');
+  </script>
+</body>
+</html>

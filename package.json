@@ -1,0 +1,12 @@
+{
+  "name": "soul-lab",
+  "version": "1.0.0",
+  "description": "Kids Beat Studio - Interactive music production app for Hip-Hop and R&B",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "dev": "python3 -m http.server 8080"
+  },
+  "keywords": ["music", "education", "beats", "hip-hop", "tone.js"],
+  "author": "Soul Lab",
+  "license": "MIT"
+}

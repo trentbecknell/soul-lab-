@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Soul Lab — Kids Beat Studio</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <script defer src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <style>
+    :root{
+      --bg:#0f1222; --panel:#171a2e; --ink:#e9eefc; --muted:#aab2d5; --accent:#8ef5d1; --accent2:#ffcc66; --hot:#ff7aa2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(180deg,#10132a,#0a0c1a);color:var(--ink);min-height:100vh}
+    header{padding:20px 24px;border-bottom:1px solid #1f2342;background: radial-gradient(1200px 400px at 10% -20%, #1b1f3d, transparent)}
+    header h1{margin:0;font-size:24px;letter-spacing:.5px}
+    header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    .grid{display:grid;grid-template-columns:280px 1fr;gap:16px}
+    .panel{background:var(--panel);border:1px solid #24294e;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    .left{padding:16px}
+    .right{padding:0;overflow:hidden}
+    .section{margin-bottom:16px}
+    h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:8px 10px;border:1px solid #2b315e;border-radius:999px;cursor:pointer;user-select:none;font-size:13px;transition:all 0.15s}
+    .chip:hover{border-color:#3a4182}
+    .chip.active{background:linear-gradient(180deg,#27305e,#222a55);border-color:#3a4182;box-shadow:inset 0 0 0 1px #4b56a4}
+    .controls label{display:block;font-size:12px;color:var(--muted);margin:8px 0 2px}
+    .controls input[type=range]{width:100%;accent-color:var(--accent)}
+    .big-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid #2b315e;background:#1b1f3f;border-radius:999px;color:var(--ink);padding:10px 16px;cursor:pointer;font-size:14px;transition:all 0.15s}
+    .big-btn:hover{background:#222447;border-color:#3a4182}
+    .big-btn:active{transform:translateY(1px)}
+    .big-btn.playing{background:linear-gradient(180deg,#2a5f4a,#1f4a38);border-color:#3a7d5f}
+
+    /* Transport */
+    .transport{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #24294e;background:linear-gradient(180deg,#1b1f3f,#161a34);flex-wrap:wrap}
+    .transport .status{margin-left:auto;color:var(--muted);font-size:12px}
+
+    /* Sequencer */
+    .seq-wrap{padding:14px;min-height:400px}
+    .track{display:grid;grid-template-columns:140px 1fr;align-items:center;margin:8px 0;gap:10px}
+    .track .label{display:flex;align-items:center;gap:8px}
+    .label .color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+    .label strong{font-size:13px}
+    .label .track-btn{padding:4px 8px;font-size:11px;border:1px solid #2b315e;border-radius:6px;background:#12152b;cursor:pointer;margin-left:auto}
+    .label .track-btn:hover{background:#171d3b}
+    .steps{display:grid;grid-template-columns:repeat(16,1fr);gap:4px}
+    .step{aspect-ratio:1/1;border:1px solid #2b315e;border-radius:8px;background:#12152b;cursor:pointer;position:relative;transition:all 0.1s}
+    .step:hover{border-color:#3a4182;background:#171d3b}
+    .step.on{background:linear-gradient(180deg,#394392,#2a316d);box-shadow:inset 0 0 0 1px #5b67c9;border-color:#4a55b0}
+    .step.playhead{outline:2px solid var(--accent);outline-offset:2px}
+
+    .subtle{color:var(--muted);font-size:12px;line-height:1.5}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#10132a;border:1px solid #283059;border-radius:6px;padding:2px 6px;font-size:11px}
+
+    .footer{padding:12px 16px;border-top:1px solid #24294e;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;flex-wrap:wrap;gap:8px}
+
+    .preset-btn{padding:8px 12px;border:1px solid #33407a;border-radius:8px;background:#12152b;cursor:pointer;font-size:13px;transition:all 0.15s}
+    .preset-btn:hover{background:#171d3b;border-color:#4a5599}
+
+    .pill{padding:6px 10px;border-radius:999px;background:#12152b;border:1px solid #2b315e;font-size:12px}
+
+    .link{color:var(--accent2);text-decoration:none}
+    .link:hover{text-decoration:underline}
+
+    select.pill{padding:6px 10px;cursor:pointer;color:var(--ink)}
+
+    @media (max-width: 900px) {
+      .grid{grid-template-columns:1fr}
+      .track{grid-template-columns:120px 1fr}
+      .steps{gap:3px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎵 Soul Lab — Kids Beat Studio</h1>
+    <p>Make jazzy, soulful Hip‑Hop & R&B beats by swapping <em>ingredients</em>: 808s vs. live drums, basses, keys, guitars, and horns. Built for kids & classrooms.</p>
+  </header>
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT: instruments & global controls -->
+      <aside class="panel left">
+        <div class="section">
+          <h2>Quick Styles</h2>
+          <div class="row" id="presets">
+            <button class="preset-btn" data-preset="boomBap">🟣 Boom‑Bap Soul</button>
+            <button class="preset-btn" data-preset="jazzSoul">🟡 Jazzy R&B</button>
+            <button class="preset-btn" data-preset="trapSoul">🔵 Trap‑Soul</button>
+            <button class="preset-btn" data-preset="chiSoul">🟢 Chicago Soul</button>
+          </div>
+        </div>
+
+        <div class="section controls">
+          <h2>Transport</h2>
+          <div class="row">
+            <button id="play" class="big-btn">▶️ Play</button>
+            <button id="stop" class="big-btn">⏹️ Stop</button>
+            <button id="clear" class="big-btn">🗑️ Clear All</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="testAudio" class="big-btn" style="font-size:11px">🔊 Test Audio</button>
+          </div>
+          <label for="bpm">Tempo: <strong><span id="bpmVal">90</span> BPM</strong></label>
+          <input id="bpm" type="range" min="60" max="160" value="90"/>
+          <label for="swing">Swing: <strong><span id="swingVal">0</span>%</strong></label>
+          <input id="swing" type="range" min="0" max="60" value="0"/>
+          <div class="row" style="margin-top:6px">
+            <label class="pill"><input type="checkbox" id="humanize"> Humanize</label>
+            <label class="pill"><input type="checkbox" id="vinyl"> Vinyl Crackle</label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Key & Scale</h2>
+          <div class="row">
+            <select id="keySel" class="pill">
+              <option>C</option><option>C#</option><option>D</option><option>Eb</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>Ab</option><option>A</option><option>Bb</option><option>B</option>
+            </select>
+            <select id="scaleSel" class="pill">
+              <option value="minorPent">Minor Pentatonic</option>
+              <option value="dorian">Dorian</option>
+              <option value="minor">Natural Minor</option>
+              <option value="mixolydian">Mixolydian</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section subtle">
+          <p><span class="kbd">Tip</span> Try swapping between <em>live drums</em> and <em>808 kit</em> to hear the difference. Change bass sounds for more variety!</p>
+        </div>
+      </aside>
+
+      <!-- RIGHT: transport + sequencer -->
+      <section class="panel right">
+        <div class="transport">
+          <div class="row">
+            <button id="kitLive" class="chip active">🥁 Live Drums</button>
+            <button id="kit808" class="chip">🎛️ 808 Kit</button>
+          </div>
+          <div class="row" style="margin-left:16px">
+            <button id="bassElec" class="chip active">🎸 Bass Guitar</button>
+            <button id="bassSynth" class="chip">🧪 Synth Bass</button>
+          </div>
+          <div class="status" id="status">Ready — Click Play to start</div>
+        </div>
+
+        <div class="seq-wrap" id="seq"></div>
+        <div class="footer">
+          <div>
+            Built with <a class="link" href="https://tonejs.github.io/" target="_blank" rel="noreferrer">Tone.js</a>. Pre-loaded drum samples + live synthesis.
+          </div>
+          <div>
+            © 2025 Soul Lab (demo). For classrooms & kids workshops.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+<script>
+// -------------------------------------------------------------
+// Soul Lab — Kids Beat Studio (Standalone) — Tone.js Step Sequencer
+// -------------------------------------------------------------
+// Wait for Tone.js to load before initializing
+(function() {
+  'use strict';
+  
+  // Check if Tone.js is loaded, if not wait for it
+  function initApp() {
+    if (typeof Tone === 'undefined') {
+      console.log('⏳ Waiting for Tone.js to load...');
+      setTimeout(initApp, 100);
+      return;
+    }
+    
+    console.log('✅ Tone.js loaded, initializing Soul Lab...');
+    startSoulLab();
+  }
+  
+  function startSoulLab() {
+// Instruments: two drum kits (Live vs 808), two basses (Elec vs Synth), Keys (Rhodes-ish), Guitar (pluck), Horns (brass stab)
+// Pattern grid: 16 steps per bar, per track.
+
+const State = {
+  bpm: 90, swing: 0, humanize: false, vinyl: false,
+  key: 'C', scale: 'minorPent',
+  kit: 'live', bass: 'elec',
+  tracks: [],
+  playing: false
+};
+
+const scales = {
+  minorPent: [0,3,5,7,10],
+  dorian: [0,2,3,5,7,9,10],
+  minor: [0,2,3,5,7,8,10],
+  mixolydian: [0,2,4,5,7,9,10]
+};
+
+const noteIndex = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+function midiFromKey(key, semitone){
+  const base = noteIndex.indexOf(key);
+  return 48 + ((base + semitone + 120) % 12); // around C3–C4
+}
+
+// Track definitions with colors
+const TRACKS = [
+  { id:'kick', name:'Kick', color:'#8ef5d1' },
+  { id:'snare', name:'Snare', color:'#ffcc66' },
+  { id:'hats', name:'Hats', color:'#7ec8ff' },
+  { id:'perc', name:'Perc', color:'#ff7aa2' },
+  { id:'bass', name:'Bass', color:'#b0f28a' },
+  { id:'keys', name:'Keys', color:'#bda7ff' },
+  { id:'gtr',  name:'Guitar', color:'#ffd5a7' },
+  { id:'horn', name:'Horns', color:'#f6a6ff' },
+];
+
+// Initialize empty 16‑step patterns
+State.tracks = TRACKS.map(t => ({...t, steps:Array(16).fill(false)}));
+
+// Synth graph --------------------------------------------------
+const FX = {
+  reverb: new Tone.Reverb({ decay:3.5, wet:0.25 }).toDestination(),
+  chorus: new Tone.Chorus({ frequency:1.8, delayTime:2.5, depth:0.6, wet:0.2 }).start(),
+  comp: new Tone.Compressor({ threshold:-12, ratio:2.5, attack:0.01, release:0.2 }).toDestination(),
+  vinyl: new Tone.Noise('pink')
+};
+FX.chorus.connect(FX.reverb);
+
+// Sample players for drums
+const Samples = {
+  live: { kick: null, snare: null, hats: null, perc: null },
+  kit808: { kick: null, snare: null, hats: null, perc: null }
+};
+
+let Bass = {};
+let Keys = {};
+let Guitar = {};
+let Horns = {};
+
+// Load drum samples
+async function loadSamples() {
+  const basePath = 'downloads/for app/';
+  const statusEl = document.getElementById('status');
+  
+  // Helper to try loading first available file from a folder
+  async function loadFromFolder(folderName, tryNames = []) {
+    const folder = basePath + folderName + '/';
+    const extensions = ['wav', 'mp3', 'ogg', 'm4a', 'aiff'];
+    
+    // Common generic names to try (including Detroit Dough samples)
+    const genericNames = [
+      'Detroit Dough  - Kick 01',
+      'Detroit Dough  - Snare 01', 
+      'Detroit Dough  - Hat Loop 1',
+      'Detroit Dough  - Fill 1',
+      'sample', 'audio', '1', '01', 'sound', folderName
+    ];
+    const allNames = [...tryNames, ...genericNames];
+    
+    // Try each name with each extension
+    for (const name of allNames) {
+      for (const ext of extensions) {
+        try {
+          const path = folder + name + '.' + ext;
+          const player = new Tone.Player(path).connect(FX.comp);
+          // Test if it loads
+          await new Promise((resolve, reject) => {
+            player.load(path).then(resolve).catch(reject);
+          });
+          console.log(`✅ Loaded: ${path}`);
+          return player;
+        } catch(e) {
+          // Try next combination
+        }
+      }
+    }
+    
+    console.warn(`⚠️ No audio file found in ${folderName}/`);
+    return null;
+  }
+  
+  try {
+    console.log('🔍 Looking for samples in folders...');
+    
+    // Load from folders - tries multiple filenames automatically
+    Samples.live.kick = await loadFromFolder('Kicks', ['kick', 'bd', 'bassdrum']);
+    Samples.live.snare = await loadFromFolder('Snares', ['snare', 'sd']);
+    Samples.live.hats = await loadFromFolder('Hat Loops', ['hats', 'hihat', 'hh', 'cymbal']);
+    Samples.live.perc = await loadFromFolder('Fills', ['fill', 'perc', 'percussion', 'loop']);
+    
+    // 808 kit uses same samples for now
+    Samples.kit808.kick = Samples.live.kick;
+    Samples.kit808.snare = Samples.live.snare;
+    Samples.kit808.hats = Samples.live.hats;
+    Samples.kit808.perc = Samples.live.perc;
+    
+    // Count successfully loaded samples
+    const loadedCount = [Samples.live.kick, Samples.live.snare, Samples.live.hats, Samples.live.perc].filter(s => s).length;
+    console.log(`✅ Loaded ${loadedCount}/4 drum samples from folders`);
+    
+    if(statusEl) {
+      if(loadedCount === 4) {
+        statusEl.textContent = '✅ All samples loaded! Click Play to start';
+      } else if(loadedCount > 0) {
+        statusEl.textContent = `Loaded ${loadedCount}/4 samples (synth for missing)`;
+      } else {
+        statusEl.textContent = 'Using synth drums (drop samples in folders)';
+      }
+    }
+  } catch(err) {
+    console.warn('⚠️ Error loading samples:', err.message);
+    console.log('✅ Using fallback synthesized drums');
+    if(statusEl) statusEl.textContent = 'Ready — Using synth drums';
+  }
+}
+
+// Fallback synthesized drums if samples don't load
+function buildLiveDrums(){
+  return {
+    kick: new Tone.MembraneSynth({ pitchDecay:0.02, octaves:8, oscillator:{type:'sine'}, envelope:{attack:0.001, decay:0.4, sustain:0.01, release:0.4} }).connect(FX.comp),
+    snare: new Tone.NoiseSynth({ noise:{type:'white'}, envelope:{ attack:0.001, decay:0.2, sustain:0 } }).connect(new Tone.Filter(1800,'bandpass')).connect(FX.comp),
+    hats: new Tone.MetalSynth({ frequency:400, envelope:{ attack:0.001, decay:0.1, release:0.01 }, harmonicity:5.1, modulationIndex:32 }).connect(FX.comp),
+    perc: new Tone.MetalSynth({ frequency:200, envelope:{ attack:0.001, decay:0.3, release:0.05 }, harmonicity:8, modulationIndex:8 }).connect(FX.comp)
+  };
+}
+
+function build808Kit(){
+  return {
+    kick: new Tone.MembraneSynth({ pitchDecay:0.08, octaves:10, oscillator:{type:'sine'}, envelope:{attack:0.001, decay:0.8, sustain:0.01, release:0.8} }).connect(new Tone.Distortion(0.01)).connect(FX.comp),
+    snare: new Tone.NoiseSynth({ noise:{type:'white'}, envelope:{ attack:0.001, decay:0.15, sustain:0 } }).connect(new Tone.Filter(2500,'highpass')).connect(FX.comp),
+    hats: new Tone.MetalSynth({ frequency:600, envelope:{ attack:0.001, decay:0.05, release:0.008 }, harmonicity:7, modulationIndex:40 }).connect(FX.comp),
+    perc: new Tone.MetalSynth({ frequency:120, envelope:{ attack:0.001, decay:0.25, release:0.04 }, harmonicity:3, modulationIndex:12 }).connect(FX.comp)
+  };
+}
+
+const FallbackDrums = {
+  live: buildLiveDrums(),
+  kit808: build808Kit()
+};
+
+function buildBass(type){
+  if(type==='synth'){
+    return new Tone.MonoSynth({ oscillator:{type:'square'}, filter:{ Q:1, type:'lowpass', rolloff:-24 }, envelope:{attack:0.01,decay:0.2,sustain:0.6,release:0.2}, filterEnvelope:{ attack:0.01, decay:0.2, sustain:0.2, release:0.2, baseFrequency:80, octaves:3 } }).connect(FX.comp);
+  } else {
+    return new Tone.MonoSynth({ oscillator:{type:'triangle'}, envelope:{attack:0.02,decay:0.1,sustain:0.8,release:0.3}, filter:{type:'lowpass',rolloff:-12, Q:0.5} }).connect(new Tone.Chorus({frequency:0.3, depth:0.2, delayTime:4, wet:0.1}).start()).connect(FX.comp);
+  }
+}
+
+function buildKeys(){
+  return new Tone.PolySynth(Tone.Synth, { oscillator:{type:'sine'}, envelope:{attack:0.02, decay:0.2, sustain:0.6, release:0.8} }).connect(FX.chorus).connect(FX.reverb);
+}
+
+function buildGuitar(){
+  return new Tone.PluckSynth({ attackNoise:1.2, dampening:3200, resonance:0.85 }).connect(FX.reverb);
+}
+
+function buildHorns(){
+  return new Tone.Synth({ oscillator:{type:'sawtooth'}, envelope:{attack:0.01, decay:0.2, sustain:0.6, release:0.4} }).connect(new Tone.Filter(1200,'lowpass')).connect(FX.reverb);
+}
+
+// Init instruments
+(function init(){
+  Bass.node = buildBass('elec'); Bass.type = 'elec';
+  Keys.node = buildKeys();
+  Guitar.node = buildGuitar();
+  Horns.node = buildHorns();
+  loadSamples(); // Start loading samples
+})();
+
+// Vinyl crackle loop
+let vinylLoop = null;
+function updateVinyl(){
+  if(State.vinyl && !vinylLoop){
+    FX.vinyl.start();
+    FX.vinyl.volume.value = -40;
+    vinylLoop = new Tone.Loop(time=>{ /* subtle amplitude wiggle */ }, '4m').start(0);
+    FX.vinyl.connect(new Tone.Filter(1000,'highpass')).connect(new Tone.Gain(0.03)).connect(FX.reverb);
+  } else if(!State.vinyl && vinylLoop){
+    FX.vinyl.stop();
+    vinylLoop.cancel();
+    vinylLoop = null;
+  }
+}
+
+// UI Rendering -------------------------------------------------
+const seqEl = document.getElementById('seq');
+function renderSequencer(){
+  seqEl.innerHTML = '';
+  State.tracks.forEach((t,idx)=>{
+    const row = document.createElement('div');
+    row.className = 'track';
+
+    // label
+    const label = document.createElement('div');
+    label.className = 'label';
+    const dot = document.createElement('span');
+    dot.className = 'color'; dot.style.background = t.color;
+    const name = document.createElement('strong');
+    name.textContent = t.name;
+    
+    // randomize button
+    const rand = document.createElement('button'); 
+    rand.className='track-btn'; 
+    rand.textContent='🎲'; 
+    rand.title='Randomize row';
+    rand.onclick = ()=>{ 
+      t.steps = t.steps.map(()=>Math.random()<0.25); 
+      renderSequencer(); 
+    };
+
+    label.appendChild(dot); 
+    label.appendChild(name); 
+    label.appendChild(rand);
+
+    // steps
+    const steps = document.createElement('div'); 
+    steps.className = 'steps';
+    t.steps.forEach((on,s)=>{
+      const cell = document.createElement('div'); 
+      cell.className = 'step'+(on?' on':'');
+      cell.onclick = ()=>{ 
+        t.steps[s]=!t.steps[s]; 
+        cell.classList.toggle('on'); 
+      };
+      steps.appendChild(cell);
+    });
+
+    row.appendChild(label); 
+    row.appendChild(steps);
+    seqEl.appendChild(row);
+  });
+}
+renderSequencer();
+
+// Sequencing / Transport --------------------------------------
+let playheadIndex = 0;
+function setPlayhead(col){
+  document.querySelectorAll('.steps').forEach(steps=>{
+    [...steps.children].forEach((c,i)=>{
+      c.classList.toggle('playhead', i===col);
+    })
+  });
+}
+
+function scheduleLoop(){
+  Tone.Transport.cancel(0);
+  Tone.Transport.scheduleRepeat(time=>{
+    const step = playheadIndex % 16;
+    setPlayhead(step);
+    triggerStep(step, time);
+    playheadIndex++;
+  }, '16n');
+}
+
+function applyTransport(){
+  Tone.Transport.bpm.value = State.bpm;
+  Tone.Transport.swing = State.swing/100; // 0..1
+  Tone.Transport.swingSubdivision = '8n';
+}
+
+function triggerStep(step, time){
+  const key = State.key, sc = scales[State.scale];
+  const kit = State.kit === '808' ? 'kit808' : 'live';
+  
+  function scaleNote(deg, octave=0){
+    const semitone = sc[(deg % sc.length + sc.length)%sc.length] + 12*octave;
+    return Tone.Frequency(midiFromKey(key, semitone), 'midi').toNote();
+  }
+
+  let triggeredCount = 0;
+
+  State.tracks.forEach(t=>{
+    if(!t.steps[step]) return;
+
+    triggeredCount++;
+
+    switch(t.id){
+      case 'kick': 
+        if(Samples[kit].kick?.loaded) {
+          Samples[kit].kick.start(time);
+          console.log(`🥁 Kick (sample) at step ${step}`);
+        } else {
+          FallbackDrums[kit].kick.triggerAttackRelease('C1','8n', time);
+          console.log(`🥁 Kick (synth) at step ${step}`);
+        }
+        break;
+      case 'snare': 
+        if(Samples[kit].snare?.loaded) {
+          Samples[kit].snare.start(time);
+        } else {
+          FallbackDrums[kit].snare.triggerAttackRelease('8n', time);
+        }
+        break;
+      case 'hats': 
+        if(Samples[kit].hats?.loaded) {
+          Samples[kit].hats.start(time);
+        } else {
+          FallbackDrums[kit].hats.triggerAttackRelease('16n', time, 0.5);
+        }
+        break;
+      case 'perc': 
+        if(Samples[kit].perc?.loaded) {
+          Samples[kit].perc.start(time);
+        } else {
+          FallbackDrums[kit].perc.triggerAttackRelease('16n', time, 0.5);
+        }
+        break;
+      case 'bass': 
+        Bass.node.triggerAttackRelease(scaleNote(0,-1), '8n', time, 0.9);
+        console.log(`🎸 Bass: ${scaleNote(0,-1)} at step ${step}`);
+        break;
+      case 'keys': 
+        Keys.node.triggerAttackRelease([scaleNote(0), scaleNote(2), scaleNote(4)], '4n', time, 0.5);
+        console.log(`🎹 Keys chord at step ${step}`);
+        break;
+      case 'gtr': 
+        Guitar.node.triggerAttackRelease(scaleNote(3), '8n', time);
+        console.log(`🎸 Guitar: ${scaleNote(3)} at step ${step}`);
+        break;
+      case 'horn': 
+        Horns.node.triggerAttackRelease(scaleNote(4,1), '8n', time, 0.6);
+        console.log(`🎺 Horn: ${scaleNote(4,1)} at step ${step}`);
+        break;
+    }
+  });
+
+  // Only log on first step to avoid console spam
+  if(step === 0 && triggeredCount > 0) {
+    console.log(`✨ Step 0: ${triggeredCount} instruments triggered`);
+  }
+}
+
+// Presets ------------------------------------------------------
+const PRESETS = {
+  boomBap(){
+    State.bpm = 92; State.swing = 10; State.key='E'; State.scale='dorian';
+    setKit('live'); setBass('elec');
+    pattern(['kick'], [0,4,8,12]);
+    pattern(['snare'], [4,12]);
+    pattern(['hats'], [0,2,4,6,8,10,12,14]);
+    pattern(['perc'], [3,11]);
+    pattern(['bass'], [0,3,7,10]);
+    pattern(['keys'], [0,8]);
+    clear(['gtr','horn']);
+    applyUI();
+  },
+  jazzSoul(){
+    State.bpm = 86; State.swing = 4; State.key='Bb'; State.scale='mixolydian';
+    setKit('live'); setBass('elec');
+    pattern(['kick'], [0,5,8,11]);
+    pattern(['snare'], [4,12]);
+    pattern(['hats'], [0,2,4,6,8,10,12,14]);
+    pattern(['bass'], [0,2,4,6,8,10,12,14]);
+    pattern(['keys'], [0,8]);
+    pattern(['gtr'], [2,6,10,14]);
+    clear(['perc','horn']);
+    applyUI();
+  },
+  trapSoul(){
+    State.bpm = 140; State.swing = 0; State.key='C#'; State.scale='minor';
+    setKit('808'); setBass('synth');
+    pattern(['kick'], [0,7,8,11,15]);
+    pattern(['snare'], [4,12]);
+    pattern(['hats'], [0,1,2,3,4,6,8,10,12,14,15]);
+    pattern(['perc'], [5,13]);
+    pattern(['bass'], [0,4,8,12]);
+    clear(['keys','gtr','horn']);
+    applyUI();
+  },
+  chiSoul(){
+    State.bpm = 94; State.swing = 8; State.key='F'; State.scale='dorian';
+    setKit('live'); setBass('elec');
+    pattern(['kick'], [0,8]);
+    pattern(['snare'], [4,12]);
+    pattern(['hats'], [0,2,4,6,8,10,12,14]);
+    pattern(['perc'], [7,15]);
+    pattern(['keys'], [0,8]);
+    pattern(['horn'], [2,10]);
+    clear(['gtr','bass']);
+    applyUI();
+  }
+};
+
+function pattern(ids, cols){ 
+  ids.forEach(id=>{ 
+    const track = row(id);
+    if(track) {
+      track.steps = Array(16).fill(false); 
+      cols.forEach(c=> track.steps[c]=true); 
+    }
+  }); 
+  renderSequencer(); 
+}
+
+function clear(ids){ 
+  ids.forEach(id=>{ 
+    const track = row(id);
+    if(track) track.steps = Array(16).fill(false); 
+  }); 
+  renderSequencer(); 
+}
+
+function row(id){ 
+  return State.tracks.find(t=>t.id===id); 
+}
+
+// UI bindings --------------------------------------------------
+const playBtn = document.getElementById('play');
+const stopBtn = document.getElementById('stop');
+const clearBtn = document.getElementById('clear');
+const testAudioBtn = document.getElementById('testAudio');
+const bpm = document.getElementById('bpm');
+const bpmVal = document.getElementById('bpmVal');
+const swing = document.getElementById('swing');
+const swingVal = document.getElementById('swingVal');
+const humanize = document.getElementById('humanize');
+const vinyl = document.getElementById('vinyl');
+const kitLive = document.getElementById('kitLive');
+const kit808 = document.getElementById('kit808');
+const bassElec = document.getElementById('bassElec');
+const bassSynth = document.getElementById('bassSynth');
+const keySel = document.getElementById('keySel');
+const scaleSel = document.getElementById('scaleSel');
+const statusEl = document.getElementById('status');
+
+playBtn.onclick = async () => {
+  try {
+    // Critical: Start Tone.js audio context (required by browsers)
+    await Tone.start();
+    console.log('🎵 Tone.js audio context started');
+    
+    applyTransport(); 
+    scheduleLoop(); 
+    updateVinyl();
+    
+    if(Tone.Transport.state !== 'started'){
+      Tone.Transport.start('+0.1');
+      State.playing = true;
+      playBtn.classList.add('playing');
+      playBtn.innerHTML = '⏸️ Pause';
+      statusEl.textContent = `▶️ Playing at ${State.bpm} BPM`;
+      console.log('▶️ Playback started');
+    } else {
+      Tone.Transport.pause();
+      State.playing = false;
+      playBtn.classList.remove('playing');
+      playBtn.innerHTML = '▶️ Play';
+      statusEl.textContent = 'Paused';
+      console.log('⏸️ Playback paused');
+    }
+  } catch(err) {
+    console.error('❌ Audio error:', err);
+    statusEl.textContent = 'Error starting audio - check console';
+    alert('Could not start audio. Check browser console (F12) for details.');
+  }
+};
+
+stopBtn.onclick = () => {
+  Tone.Transport.stop(); 
+  playheadIndex = 0; 
+  setPlayhead(-1);
+  State.playing = false;
+  playBtn.classList.remove('playing');
+  playBtn.innerHTML = '▶️ Play';
+  statusEl.textContent = 'Stopped';
+};
+
+testAudioBtn.onclick = async () => {
+  try {
+    await Tone.start();
+    console.log('🔊 Testing audio...');
+    
+    // Play a simple test tone
+    const testSynth = new Tone.Synth().toDestination();
+    testSynth.triggerAttackRelease('C4', '8n');
+    
+    // Also test kick drum
+    setTimeout(() => {
+      FallbackDrums.live.kick.triggerAttackRelease('C1', '8n');
+      console.log('✅ Test kick triggered');
+    }, 500);
+    
+    setTimeout(() => {
+      testSynth.dispose();
+    }, 1000);
+    
+    statusEl.textContent = '🔊 Test tone played - did you hear it?';
+    console.log('✅ Audio test complete');
+  } catch(err) {
+    console.error('❌ Audio test failed:', err);
+    alert('Audio test failed! Error: ' + err.message);
+  }
+};
+
+clearBtn.onclick = () => {
+  if(confirm('Clear all patterns? This cannot be undone.')) {
+    State.tracks.forEach(t => t.steps = Array(16).fill(false));
+    renderSequencer();
+  }
+};
+
+bpm.oninput = (e)=>{ 
+  State.bpm = +e.target.value; 
+  bpmVal.textContent = State.bpm; 
+  applyTransport(); 
+  if(State.playing) statusEl.textContent = `Playing at ${State.bpm} BPM`;
+};
+
+swing.oninput = (e)=>{ 
+  State.swing = +e.target.value; 
+  swingVal.textContent = State.swing; 
+  applyTransport(); 
+};
+
+humanize.onchange = (e)=>{ 
+  State.humanize = e.target.checked; 
+  Tone.Transport.humanize = State.humanize; 
+};
+
+vinyl.onchange = (e)=>{ 
+  State.vinyl = e.target.checked; 
+  updateVinyl(); 
+};
+
+function setKit(which){
+  State.kit = which==='808' ? '808' : 'live';
+  kitLive.classList.toggle('active', State.kit==='live');
+  kit808.classList.toggle('active', State.kit==='808');
+}
+
+function setBass(which){
+  State.bass = which==='synth' ? 'synth' : 'elec';
+  Bass.node.dispose && Bass.node.dispose();
+  Bass.node = buildBass(State.bass);
+  Bass.type = State.bass;
+  bassElec.classList.toggle('active', State.bass==='elec');
+  bassSynth.classList.toggle('active', State.bass==='synth');
+}
+
+kitLive.onclick = ()=>setKit('live');
+kit808.onclick = ()=>setKit('808');
+bassElec.onclick = ()=>setBass('elec');
+bassSynth.onclick = ()=>setBass('synth');
+
+keySel.onchange = (e)=>{ State.key = e.target.value; };
+scaleSel.onchange = (e)=>{ State.scale = e.target.value; };
+
+// Preset buttons
+[...document.querySelectorAll('#presets .preset-btn')].forEach(btn=>{
+  btn.onclick = ()=>{ 
+    const name = btn.dataset.preset; 
+    if(PRESETS[name]) {
+      PRESETS[name]();
+      if(State.playing) {
+        statusEl.textContent = `Playing ${btn.textContent} preset`;
+      }
+    }
+  };
+});
+
+function applyUI(){
+  bpm.value = State.bpm; bpmVal.textContent = State.bpm;
+  swing.value = State.swing; swingVal.textContent = State.swing;
+  kitLive.classList.toggle('active', State.kit==='live');
+  kit808.classList.toggle('active', State.kit==='808');
+  bassElec.classList.toggle('active', State.bass==='elec');
+  bassSynth.classList.toggle('active', State.bass==='synth');
+  keySel.value = State.key; scaleSel.value = State.scale;
+  renderSequencer();
+}
+
+// Default preset - start with Boom-Bap Soul
+PRESETS.boomBap();
+console.log('🎵 Soul Lab initialized!');
+console.log('📊 Current pattern:', State.tracks.map(t => ({
+  name: t.name,
+  active: t.steps.filter(s=>s).length + ' steps'
+})));
+console.log('💡 Click "Test Audio" button first to verify sound works');
+console.log('💡 Then click "Play" to hear your beat!');
+
+  } // End startSoulLab()
+  
+  // Start initialization when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+})();
+</script>
+</body>
+</html>
