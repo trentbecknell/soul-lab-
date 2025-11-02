@@ -244,57 +244,26 @@ async function loadSamples() {
   const basePath = 'downloads/for app/';
   const statusEl = document.getElementById('status');
   
-  // Helper to try loading first available file from a folder
-  async function loadFromFolder(folderName, tryNames = []) {
-    const folder = basePath + folderName + '/';
-    const extensions = ['wav', 'mp3', 'ogg', 'm4a', 'aiff'];
-    
-    // Common generic names to try (including Detroit Dough samples)
-    const genericNames = [
-      'Detroit Dough  - Kick 01',
-      'Detroit Dough  - Snare 01', 
-      'Detroit Dough  - Hat Loop 1',
-      'Detroit Dough  - Fill 1',
-      'sample', 'audio', '1', '01', 'sound', folderName
-    ];
-    const allNames = [...tryNames, ...genericNames];
-    
-    console.log(`🔍 Trying to load from ${folderName}/...`);
-    
-    // Try each name with each extension
-    for (const name of allNames) {
-      for (const ext of extensions) {
-        try {
-          // Build path with proper URL encoding for each component
-          const filename = name + '.' + ext;
-          const encodedFolder = basePath + encodeURIComponent(folderName) + '/';
-          const encodedPath = encodedFolder + encodeURIComponent(filename);
-          
-          console.log(`  Attempting: ${folder}${filename}`);
-          const player = new Tone.Player(encodedPath).connect(FX.comp);
-          // Test if it loads by waiting for the buffer
-          await player.load(encodedPath);
-          console.log(`  ✅ SUCCESS: Loaded ${filename}`);
-          return player;
-        } catch(e) {
-          console.log(`  ❌ Failed: ${e.message}`);
-          // Try next combination
-        }
-      }
-    }
-    
-    console.warn(`⚠️ No audio file found in ${folderName}/ - will use synth`);
-    return null;
-  }
-  
   try {
-    console.log('🔍 Looking for samples in folders...');
+    console.log('🔍 Loading Detroit Dough samples...');
     
-    // Load from folders - tries multiple filenames automatically
-    Samples.live.kick = await loadFromFolder('Kicks', ['kick', 'bd', 'bassdrum']);
-    Samples.live.snare = await loadFromFolder('Snares', ['snare', 'sd']);
-    Samples.live.hats = await loadFromFolder('Hat Loops', ['hats', 'hihat', 'hh', 'cymbal']);
-    Samples.live.perc = await loadFromFolder('Fills', ['fill', 'perc', 'percussion', 'loop']);
+    // Load specific Detroit Dough samples with proper URL encoding
+    const kickPath = basePath + encodeURIComponent('Kicks') + '/' + encodeURIComponent('Detroit Dough  - Kick 01.wav');
+    const snarePath = basePath + encodeURIComponent('Snares') + '/' + encodeURIComponent('Detroit Dough  - Snare 01.wav');
+    const hatsPath = basePath + encodeURIComponent('Hat Loops') + '/' + encodeURIComponent('Detroit Dough  - Hat Loop 1.wav');
+    const fillPath = basePath + encodeURIComponent('Fills') + '/' + encodeURIComponent('Detroit Dough  - Fill 1.wav');
+    
+    console.log('Loading kick:', kickPath);
+    Samples.live.kick = new Tone.Player(kickPath).connect(FX.comp);
+    
+    console.log('Loading snare:', snarePath);
+    Samples.live.snare = new Tone.Player(snarePath).connect(FX.comp);
+    
+    console.log('Loading hats:', hatsPath);
+    Samples.live.hats = new Tone.Player(hatsPath).connect(FX.comp);
+    
+    console.log('Loading fills:', fillPath);
+    Samples.live.perc = new Tone.Player(fillPath).connect(FX.comp);
     
     // 808 kit uses same samples for now
     Samples.kit808.kick = Samples.live.kick;
@@ -302,23 +271,16 @@ async function loadSamples() {
     Samples.kit808.hats = Samples.live.hats;
     Samples.kit808.perc = Samples.live.perc;
     
-    // Count successfully loaded samples
-    const loadedCount = [Samples.live.kick, Samples.live.snare, Samples.live.hats, Samples.live.perc].filter(s => s).length;
-    console.log(`✅ Loaded ${loadedCount}/4 drum samples from folders`);
+    // Wait for all buffers to load
+    await Tone.loaded();
     
-    if(statusEl) {
-      if(loadedCount === 4) {
-        statusEl.textContent = '✅ All samples loaded! Click Play to start';
-      } else if(loadedCount > 0) {
-        statusEl.textContent = `Loaded ${loadedCount}/4 samples (synth for missing)`;
-      } else {
-        statusEl.textContent = 'Using synth drums (drop samples in folders)';
-      }
-    }
+    console.log('✅ All Detroit Dough samples loaded successfully!');
+    if(statusEl) statusEl.textContent = '✅ Detroit Dough samples loaded! Click Play';
+    
   } catch(err) {
-    console.warn('⚠️ Error loading samples:', err.message);
-    console.log('✅ Using fallback synthesized drums');
-    if(statusEl) statusEl.textContent = 'Ready — Using synth drums';
+    console.error('❌ Error loading samples:', err);
+    console.log('⚠️ Using fallback synthesized drums');
+    if(statusEl) statusEl.textContent = 'Using synth drums (samples failed to load)';
   }
 }
 
