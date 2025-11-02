@@ -259,25 +259,31 @@ async function loadSamples() {
     ];
     const allNames = [...tryNames, ...genericNames];
     
+    console.log(`🔍 Trying to load from ${folderName}/...`);
+    
     // Try each name with each extension
     for (const name of allNames) {
       for (const ext of extensions) {
         try {
-          const path = folder + name + '.' + ext;
-          const player = new Tone.Player(path).connect(FX.comp);
-          // Test if it loads
-          await new Promise((resolve, reject) => {
-            player.load(path).then(resolve).catch(reject);
-          });
-          console.log(`✅ Loaded: ${path}`);
+          // Build path with proper URL encoding for each component
+          const filename = name + '.' + ext;
+          const encodedFolder = basePath + encodeURIComponent(folderName) + '/';
+          const encodedPath = encodedFolder + encodeURIComponent(filename);
+          
+          console.log(`  Attempting: ${folder}${filename}`);
+          const player = new Tone.Player(encodedPath).connect(FX.comp);
+          // Test if it loads by waiting for the buffer
+          await player.load(encodedPath);
+          console.log(`  ✅ SUCCESS: Loaded ${filename}`);
           return player;
         } catch(e) {
+          console.log(`  ❌ Failed: ${e.message}`);
           // Try next combination
         }
       }
     }
     
-    console.warn(`⚠️ No audio file found in ${folderName}/`);
+    console.warn(`⚠️ No audio file found in ${folderName}/ - will use synth`);
     return null;
   }
   
@@ -625,6 +631,14 @@ const keySel = document.getElementById('keySel');
 const scaleSel = document.getElementById('scaleSel');
 const statusEl = document.getElementById('status');
 
+// Debug: verify all elements exist
+console.log('🔍 DOM Elements Check:');
+console.log('  playBtn:', playBtn ? '✅' : '❌');
+console.log('  kitLive:', kitLive ? '✅' : '❌');
+console.log('  kit808:', kit808 ? '✅' : '❌');
+console.log('  bassElec:', bassElec ? '✅' : '❌');
+console.log('  bassSynth:', bassSynth ? '✅' : '❌');
+
 playBtn.onclick = async () => {
   try {
     // Critical: Start Tone.js audio context (required by browsers)
@@ -728,6 +742,7 @@ function setKit(which){
   State.kit = which==='808' ? '808' : 'live';
   kitLive.classList.toggle('active', State.kit==='live');
   kit808.classList.toggle('active', State.kit==='808');
+  console.log(`🎛️ Switched to ${State.kit} kit`);
 }
 
 function setBass(which){
@@ -737,12 +752,25 @@ function setBass(which){
   Bass.type = State.bass;
   bassElec.classList.toggle('active', State.bass==='elec');
   bassSynth.classList.toggle('active', State.bass==='synth');
+  console.log(`🎸 Switched to ${State.bass} bass`);
 }
 
-kitLive.onclick = ()=>setKit('live');
-kit808.onclick = ()=>setKit('808');
-bassElec.onclick = ()=>setBass('elec');
-bassSynth.onclick = ()=>setBass('synth');
+kitLive.onclick = ()=>{
+  console.log('🥁 Live Drums clicked');
+  setKit('live');
+};
+kit808.onclick = ()=>{
+  console.log('🎛️ 808 Kit clicked');
+  setKit('808');
+};
+bassElec.onclick = ()=>{
+  console.log('🎸 Bass Guitar clicked');
+  setBass('elec');
+};
+bassSynth.onclick = ()=>{
+  console.log('🧪 Synth Bass clicked');
+  setBass('synth');
+};
 
 keySel.onchange = (e)=>{ State.key = e.target.value; };
 scaleSel.onchange = (e)=>{ State.scale = e.target.value; };
